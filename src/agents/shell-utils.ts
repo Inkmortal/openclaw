@@ -21,14 +21,13 @@ function resolvePowerShellPath(): string {
 
 export function getShellConfig(): { shell: string; args: string[] } {
   if (process.platform === "win32") {
-    // Use PowerShell instead of cmd.exe on Windows.
-    // Problem: Many Windows system utilities (ipconfig, systeminfo, etc.) write
-    // directly to the console via WriteConsole API, bypassing stdout pipes.
-    // When Node.js spawns cmd.exe with piped stdio, these utilities produce no output.
-    // PowerShell properly captures and redirects their output to stdout.
+    // Use cmd.exe on Windows for proper && command chaining support.
+    // PowerShell doesn't recognize && as a command separator and fails with:
+    // "The token '&&' is not a valid statement separator in this version."
+    // This breaks voice transcription and other multi-command operations.
     return {
-      shell: resolvePowerShellPath(),
-      args: ["-NoProfile", "-NonInteractive", "-Command"],
+      shell: "cmd.exe",
+      args: ["/c"],
     };
   }
 
