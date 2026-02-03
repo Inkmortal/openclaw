@@ -1,4 +1,6 @@
 import path from "node:path";
+import os from "node:os";
+import fs from "node:fs/promises";
 import type { MsgContext } from "../auto-reply/templating.js";
 import type { OpenClawConfig } from "../config/config.js";
 import type {
@@ -9,6 +11,13 @@ import type {
 } from "./types.js";
 import { finalizeInboundContext } from "../auto-reply/reply/inbound-context.js";
 import { logVerbose, shouldLogVerbose } from "../globals.js";
+
+const AUDIO_STRIP_LOG = path.join(os.homedir(), ".openclaw", "audio-strip-debug.log");
+function audioStripLog(message: string) {
+  const timestamp = new Date().toISOString();
+  const logMessage = `${timestamp} ${message}\n`;
+  fs.appendFile(AUDIO_STRIP_LOG, logMessage).catch(() => {});
+}
 import {
   DEFAULT_INPUT_FILE_MAX_BYTES,
   DEFAULT_INPUT_FILE_MAX_CHARS,

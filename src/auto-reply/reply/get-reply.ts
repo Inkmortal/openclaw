@@ -1,3 +1,6 @@
+import path from "node:path";
+import os from "node:os";
+import fs from "node:fs/promises";
 import type { MsgContext } from "../templating.js";
 import type { GetReplyOptions, ReplyPayload } from "../types.js";
 import {
@@ -5,6 +8,13 @@ import {
   resolveAgentWorkspaceDir,
   resolveSessionAgentId,
 } from "../../agents/agent-scope.js";
+
+const REPLY_DEBUG_LOG = path.join(os.homedir(), ".openclaw", "reply-debug.log");
+function replyDebugLog(message: string) {
+  const timestamp = new Date().toISOString();
+  const logMessage = `${timestamp} ${message}\n`;
+  fs.appendFile(REPLY_DEBUG_LOG, logMessage).catch(() => {});
+}
 import { resolveModelRefFromString } from "../../agents/model-selection.js";
 import { resolveAgentTimeoutMs } from "../../agents/timeout.js";
 import { DEFAULT_AGENT_WORKSPACE_DIR, ensureAgentWorkspace } from "../../agents/workspace.js";
@@ -84,12 +94,19 @@ export async function getReplyFromConfig(
   const finalized = finalizeInboundContext(ctx);
 
   if (!isFastTestEnv) {
-    await applyMediaUnderstanding({
+    replyDebugLog(`BEFORE applyMediaUnderstanding: Body length=${finalized.Body?.length || 0}, preview: ${finalized.Body?.substring(0, 500)}`);
+    const mediaResult = await applyMediaUnderstanding({
       ctx: finalized,
       cfg,
       agentDir,
       activeModel: { provider, model },
     });
+    replyDebugLog(`AFTER applyMediaUnderstanding: Body length=${finalized.Body?.length || 0}, preview: ${finalized.Body?.substring(0, 500)}`);
+    if (mediaResult?.appliedAudio) {
+      const transcript = finalized.Transcript || finalized.CommandBody || finalized.Body;
+      const bodyLengthAfterMedia = finalized.Body?.length || 0;
+      replyDebugLog(`TRANSCRIPTION COMPLETE: SessionKey=${finalized.SessionKey}, transcript length=${transcript?.length || 0} chars, Body length after media=${bodyLengthAfterMedia}, first 100 chars: ${transcript?.substring(0, 100) || "none"}`);
+    }
     await applyLinkUnderstanding({
       ctx: finalized,
       cfg,
